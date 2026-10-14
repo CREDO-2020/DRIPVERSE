@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from './lib/supabase.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, Check, Heart, Menu,
@@ -19,6 +20,15 @@ const categories = ['All pieces', 'Hoodies', 'Sneakers', 'T-Shirts', 'Trousers',
 const money = (n) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(n)
 
 function App() {
+  const [catalogProducts, setCatalogProducts] = useState(products)
+  const [authUser, setAuthUser] = useState(null)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState('signin')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
   const [category, setCategory] = useState('All pieces')
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -28,10 +38,61 @@ function App() {
   const [mobileMenu, setMobileMenu] = useState(false)
   const [toast, setToast] = useState('')
 
-  const visibleProducts = useMemo(() => products.filter((p) =>
+  useEffect(() => {
+    let alive = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) setAuthUser(data.session?.user ?? null)
+    })
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) setAuthUser(session?.user ?? null)
+    })
+    supabase.from('products').select('id,name,category,price_rwf,image_url,color,tag')
+      .eq('is_active', true).order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (alive && !error && data?.length) {
+          setCatalogProducts(data.map((p) => ({
+            id: p.id, name: p.name, category: p.category, price: p.price_rwf,
+            image: p.image_url, color: p.color || 'Core', tag: p.tag || ''
+          })))
+        }
+      })
+    return () => {
+      alive = false
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
+
+  const submitAuth = async (event) => {
+    event.preventDefault()
+    setAuthBusy(true)
+    setAuthMessage('')
+    try {
+      if (authMode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail.trim(),
+          password: authPassword,
+          options: { data: { display_name: authName.trim() } }
+        })
+        if (error) throw error
+        setAuthMessage(data.session ? 'Account created. You are signed in.' : 'Account created. Check your email to confirm it, then sign in.')
+        if (data.session) setAuthOpen(false)
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
+        if (error) throw error
+        setAuthOpen(false)
+        notify('Welcome back to DRIPVERSE')
+      }
+    } catch (error) {
+      setAuthMessage(error.message || 'Authentication failed. Please try again.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  const visibleProducts = useMemo(() => catalogProducts.filter((p) =>
     (category === 'All pieces' || p.category === category) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
-  ), [category, search])
+  ), [catalogProducts, category, search])
 
   const notify = (message) => {
     setToast(message)
@@ -66,7 +127,7 @@ function App() {
           <button className="icon-button" aria-label="Search" onClick={() => setSearchOpen(!searchOpen)}><Search size={19} /></button>
           <button className="icon-button wishlist-nav" aria-label="Open wishlist" onClick={() => setDrawer('wishlist')}><Heart size={19} /><span className="action-count">{wishlist.length}</span></button>
           <button className="icon-button" aria-label="Open shopping bag" onClick={() => setDrawer('cart')}><ShoppingBag size={19} /><span className="action-count">{cart.length}</span></button>
-          <button className="account-link" onClick={() => notify('Account sign-in is coming in the Supabase setup phase')}>ACCOUNT <ArrowUpRight size={13} /></button>
+          <button className="account-link" onClick={async () => { if (authUser) { await supabase.auth.signOut(); notify('Signed out successfully') } else { setAuthMode('signin'); setAuthMessage(''); setAuthOpen(true) } }}>{authUser ? 'SIGN OUT' : 'ACCOUNT'} <ArrowUpRight size={13} /></button>
         </div>
       </header>
 
@@ -121,7 +182,7 @@ function App() {
         <section className="studio-banner" id="studio">
           <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85" alt="Fashion studio editorial" loading="lazy" />
           <div className="studio-overlay" />
-          <div className="studio-copy"><p className="eyebrow"><Sparkles size={14} /> YOUR LOOK. YOUR LOGIC.</p><h2>DON'T JUST<br />WEAR IT.<br /><em>MAKE IT YOURS.</em></h2><p>Step into a new way to style. Build your rotation, experiment with combinations, and find your next signature look.</p><button className="button button-light" onClick={() => notify('3D Studio is the next build phase — avatar customization coming soon')}>DISCOVER THE STUDIO <ArrowUpRight size={16} /></button></div>
+          <div className="studio-copy"><p className="eyebrow"><Sparkles size={14} /> YOUR LOOK. YOUR LOGIC.</p><h2>DON'T JUST<br />WEAR IT.<br /><em>MAKE IT YOURS.</em></h2><p>Step into a new way to style. Build your rotation, experiment with combinations, and find your next signature look.</p><button className="button button-light" onClick={() => notify('The interactive 3D avatar studio is the next build phase')}>DISCOVER THE STUDIO <ArrowUpRight size={16} /></button></div>
           <span className="studio-stamp">DRIPVERSE<br />STYLE LAB / 001</span>
         </section>
 
@@ -131,7 +192,26 @@ function App() {
       <footer className="site-footer"><div className="footer-top"><a className="wordmark footer-wordmark" href="#">DRIP<span>VERSE</span><i>®</i></a><p>YOUR STYLE. YOUR UNIVERSE.</p><button className="back-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>BACK TO TOP ↑</button></div><div className="footer-bottom"><span>© 2026 DRIPVERSE. ALL RIGHTS RESERVED.</span><span>CONCEPT STORE / KIGALI, RWANDA</span><span>BUILT FOR THE BOLD.</span></div></footer>
 
       <AnimatePresence>
-        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : products.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : products.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => setCart((old) => old.filter((_, index) => index !== i))}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => notify('Checkout is not connected to payments yet')}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
+        {authOpen && <motion.div className="auth-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setAuthOpen(false)}>
+          <motion.section className="auth-panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 18 }} onClick={(e) => e.stopPropagation()}>
+            <button className="auth-close icon-button" onClick={() => setAuthOpen(false)} aria-label="Close account panel"><X /></button>
+            <p className="eyebrow">WELCOME TO YOUR UNIVERSE</p>
+            <h2>{authMode === 'signup' ? 'CREATE YOUR ACCOUNT.' : 'GOOD TO HAVE YOU BACK.'}</h2>
+            <p className="auth-description">Save your pieces, keep your rotation, and build your own look.</p>
+            <form className="auth-form" onSubmit={submitAuth}>
+              {authMode === 'signup' && <label>DISPLAY NAME<input value={authName} onChange={(e) => setAuthName(e.target.value)} autoComplete="name" required placeholder="Your name" /></label>}
+              <label>EMAIL ADDRESS<input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="email" required placeholder="you@example.com" /></label>
+              <label>PASSWORD<input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={6} required placeholder="At least 6 characters" /></label>
+              {authMessage && <p className="auth-message" role="status">{authMessage}</p>}
+              <button className="button button-light full-button" type="submit" disabled={authBusy}>{authBusy ? 'PLEASE WAIT…' : authMode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN'} <ArrowRight size={16} /></button>
+            </form>
+            <p className="auth-switch">{authMode === 'signup' ? 'Already have an account?' : 'New to DRIPVERSE?'} <button onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthMessage('') }}>{authMode === 'signup' ? 'SIGN IN' : 'CREATE ACCOUNT'}</button></p>
+          </motion.section>
+        </motion.div>}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => setCart((old) => old.filter((_, index) => index !== i))}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => notify('Checkout is not connected to payments yet')}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
       </AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="toast" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }}><Check size={16} />{toast}</motion.div>}</AnimatePresence>
     </div>
