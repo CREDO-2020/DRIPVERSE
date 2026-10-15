@@ -33,10 +33,20 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
   const [pants, setPants] = useState('#383838')
   const [shoes, setShoes] = useState('#e6e1d8')
   const [accessory, setAccessory] = useState('none')
+  const [accessory, setAccessory] = useState('none')
   const [lookName, setLookName] = useState('Midnight uniform')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [savedLooks, setSavedLooks] = useState([])
+
+  useEffect(() => {
+    if (!initialLook) return
+    setLookName(initialLook.name || 'My look')
+    setTop(initialLook.avatar_config?.top || palettes[0].value)
+    setPants(initialLook.avatar_config?.pants || '#383838')
+    setShoes(initialLook.avatar_config?.shoes || '#e6e1d8')
+    setAccessory(initialLook.avatar_config?.accessory || 'none')
+  }, [initialLook])
 
   useEffect(() => {
     if (!initialLook) return
@@ -84,6 +94,8 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
           <div className="swatch-group"><p>01 / TOP LAYER</p><div className="swatch-row">{palettes.map(p=><button key={p.value} title={p.name} aria-label={p.name} className={top===p.value?'color-swatch chosen':'color-swatch'} style={{background:p.value}} onClick={()=>setTop(p.value)}>{top===p.value&&<Check size={14} color={p.value==='#d8d1c4'?'#111':'white'}/>}</button>)}</div><span>{palettes.find(p=>p.value===top)?.name}</span></div>
           <div className="swatch-group"><p>02 / TROUSERS</p><div className="swatch-row">{['#252525','#77766f','#5c654b','#c6bba8'].map(c=><button key={c} aria-label={'Trousers '+c} className={pants===c?'color-swatch chosen':'color-swatch'} style={{background:c}} onClick={()=>setPants(c)}>{pants===c&&<Check size={14}/>}</button>)}</div></div>
           <div className="swatch-group"><p>03 / SNEAKERS</p><div className="swatch-row">{['#e6e1d8','#1a1a1a','#8a8a8a'].map(c=><button key={c} aria-label={'Sneakers '+c} className={shoes===c?'color-swatch chosen':'color-swatch'} style={{background:c}} onClick={()=>setShoes(c)}>{shoes===c&&<Check size={14} color={c==='#e6e1d8'?'#111':'white'}/>}</button>)}</div></div>
+          <div className="swatch-group studio-accessory-group"><p>04 / ACCESSORIES</p><div className="studio-accessory-options">{[{ value: 'none', label: 'None' }, { value: 'cap', label: 'Cap' }, { value: 'chain', label: 'Chain' }, { value: 'crossbody', label: 'Crossbody' }].map(option => <button key={option.value} className={accessory === option.value ? 'studio-accessory-option is-selected' : 'studio-accessory-option'} onClick={() => setAccessory(option.value)} aria-pressed={accessory === option.value}>{option.label}</button>)}</div></div>
+          <button className="studio-reset-button" onClick={() => { setTop(palettes[0].value); setPants('#252525'); setShoes('#e6e1d8'); setAccessory('none'); setLookName('Midnight uniform'); setMessage('Outfit reset to the Midnight uniform.') }}>RESET OUTFIT</button>
           <div className="swatch-group studio-accessory-group"><p>04 / ACCESSORIES</p><div className="studio-accessory-options">{[{ value: 'none', label: 'None' }, { value: 'cap', label: 'Cap' }, { value: 'chain', label: 'Chain' }, { value: 'crossbody', label: 'Crossbody' }].map(option => <button key={option.value} className={accessory === option.value ? 'studio-accessory-option is-selected' : 'studio-accessory-option'} onClick={() => setAccessory(option.value)} aria-pressed={accessory === option.value}>{option.label}</button>)}</div></div>
           <button className="studio-reset-button" onClick={() => { setTop(palettes[0].value); setPants('#252525'); setShoes('#e6e1d8'); setAccessory('none'); setLookName('Midnight uniform'); setMessage('Outfit reset to the Midnight uniform.') }}>RESET OUTFIT</button>
           <button className="button button-light full-button save-look" onClick={saveLook} disabled={saving}>{saving?'SAVING LOOK…':'SAVE THIS LOOK'} <ArrowRight size={16}/></button>
