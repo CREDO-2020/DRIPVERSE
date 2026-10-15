@@ -33,7 +33,6 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
   const [pants, setPants] = useState('#383838')
   const [shoes, setShoes] = useState('#e6e1d8')
   const [accessory, setAccessory] = useState('none')
-  const [accessory, setAccessory] = useState('none')
   const [lookName, setLookName] = useState('Midnight uniform')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
