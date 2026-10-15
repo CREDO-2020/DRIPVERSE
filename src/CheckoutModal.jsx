@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { ArrowRight, CheckCircle2, X } from 'lucide-react'
 import { supabase } from './lib/supabase.js'
 
-export default function CheckoutModal({ onClose, onOrderCreated }) {
+const money = (amount) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(Number(amount || 0))
+
+export default function CheckoutModal({ cart = [], subtotal = 0, shipping = 0, total = 0, onClose, onOrderCreated }) {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [district, setDistrict] = useState('')
@@ -14,25 +16,32 @@ export default function CheckoutModal({ onClose, onOrderCreated }) {
 
   async function submit(event) {
     event.preventDefault()
-    setBusy(true)
-    setErrorMessage('')
-    const { data, error } = await supabase.rpc('create_order_from_cart', {
-      p_shipping_address: {
-        full_name: fullName.trim(),
-        phone: phone.trim(),
-        district: district.trim(),
-        address: address.trim(),
-        instructions: instructions.trim(),
-        country: 'Rwanda',
-      },
-    })
-    setBusy(false)
-    if (error) {
-      setErrorMessage(error.message || 'We could not create your order. Please try again.')
+    if (!cart.length) {
+      setErrorMessage('Your bag is empty. Add a piece before checkout.')
       return
     }
-    setOrderId(data)
-    onOrderCreated(data)
+    setBusy(true)
+    setErrorMessage('')
+    try {
+      const { data, error } = await supabase.rpc('create_order_from_cart', {
+        p_shipping_address: {
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          district: district.trim(),
+          address: address.trim(),
+          instructions: instructions.trim(),
+          country: 'Rwanda',
+        },
+      })
+      if (error) throw error
+      if (!data) throw new Error('The order was not confirmed. Please check your bag and try again.')
+      setOrderId(data)
+      onOrderCreated(data)
+    } catch (error) {
+      setErrorMessage(error.message || 'We could not create your order. Please try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return <div className="checkout-backdrop" onClick={onClose}>
@@ -41,7 +50,16 @@ export default function CheckoutModal({ onClose, onOrderCreated }) {
       {!orderId ? <>
         <p className="eyebrow">DRIPVERSE / DELIVERY DETAILS</p>
         <h2>MAKE IT <em>YOURS.</em></h2>
-        <p className="checkout-intro">Add your delivery details to create your order. Payment will be arranged in the next checkout step.</p>
+        <p className="checkout-intro">Confirm what is in your bag and add your delivery details. Payment has not been collected at this stage.</p>
+        <div className="checkout-order-summary">
+          <p className="eyebrow">ORDER SUMMARY / {cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} PIECES</p>
+          {cart.map(({ product, quantity }) => <div className="checkout-summary-item" key={product.id}>
+            <span>{product.name} <b>× {quantity}</b></span><strong>{money(Number(product.price) * quantity)}</strong>
+          </div>)}
+          <div className="checkout-summary-line"><span>SUBTOTAL</span><strong>{money(subtotal)}</strong></div>
+          <div className="checkout-summary-line"><span>DELIVERY</span><strong>{shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
+          <div className="checkout-summary-line checkout-summary-grand"><span>ESTIMATED TOTAL</span><strong>{money(total)}</strong></div>
+        </div>
         <form className="checkout-form" onSubmit={submit}>
           <label>FULL NAME<input required autoComplete="name" value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Name for delivery"/></label>
           <label>PHONE NUMBER<input required type="tel" autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+250 7XX XXX XXX"/></label>
