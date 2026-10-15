@@ -22,3 +22,29 @@
 .auth-switch{margin-top:22px;color:#999;font-size:12px}
 .auth-switch button{background:none;border:0;color:#fff;text-decoration:underline;margin-left:6px;font-size:11px;cursor:pointer}
 .auth-form button:disabled{opacity:.6;cursor:wait}
+
+
+/* DRIPVERSE interactive outfit studio */
+.studio-modal-backdrop{position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.82);backdrop-filter:blur(9px);display:grid;place-items:center;padding:18px}
+.studio-modal{position:relative;width:min(1120px,100%);max-height:94vh;overflow:auto;background:#101010;border:1px solid #363636;color:#f5f3ef;padding:clamp(22px,4vw,42px)}
+.studio-close{position:absolute;right:18px;top:18px;z-index:3}
+.studio-modal-heading h2{font-size:clamp(30px,5vw,54px);line-height:.98;letter-spacing:-.055em;margin:12px 0}
+.studio-modal-heading h2 em{font-family:Georgia,serif;font-weight:400}
+.studio-modal-heading>p:last-child{font-size:13px;color:#aaa}
+.studio-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:22px;margin-top:24px}
+.avatar-stage{position:relative;min-height:420px;height:clamp(420px,55vh,570px);background:#171717;border:1px solid #2c2c2c;overflow:hidden}
+.avatar-stage canvas{width:100%;height:100%;display:block}
+.stage-label{position:absolute;left:15px;bottom:13px;color:#aaa;font-size:9px;letter-spacing:.12em}
+.studio-controls{display:flex;flex-direction:column;gap:23px;padding:5px 0}
+.studio-name-label{display:grid;gap:9px;color:#aaa;font-size:10px;letter-spacing:.12em}
+.studio-name-label input{background:#191919;border:1px solid #3a3a3a;color:#fff;padding:13px;font-size:14px;letter-spacing:normal;min-width:0}
+.swatch-group{border-bottom:1px solid #2e2e2e;padding-bottom:17px}
+.swatch-group>p{font-size:10px;letter-spacing:.13em;color:#aaa;margin-bottom:13px}
+.swatch-row{display:flex;gap:10px;flex-wrap:wrap}
+.color-swatch{width:33px;height:33px;border-radius:50%;border:1px solid #555;display:grid;place-items:center;cursor:pointer;transition:transform .15s,border-color .15s}
+.color-swatch:hover{transform:scale(1.08)}
+.color-swatch.chosen{outline:1px solid #f4f0e8;outline-offset:3px}
+.swatch-group>span{display:block;margin-top:12px;font-size:11px;color:#ddd}
+.save-look{margin-top:auto}
+.studio-save-message,.studio-login-note{font-size:12px;line-height:1.6;color:#d5c8ae}
+@media(max-width:760px){.studio-layout{grid-template-columns:1fr}.avatar-stage{height:400px;min-height:360px}.studio-controls{gap:18px}.studio-modal{padding:22px 16px}.studio-modal-heading{padding-right:25px}}
