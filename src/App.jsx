@@ -11,14 +11,14 @@ import {
 } from 'lucide-react'
 
 const products = [
-  { id: 1, name: 'Essential Heavyweight Hoodie', category: 'Hoodies', price: 42000, tag: 'BESTSELLER', color: 'Obsidian', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85' },
-  { id: 2, name: 'After Hours Runner', category: 'Sneakers', price: 68500, tag: 'NEW DROP', color: 'Silver / Black', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85' },
-  { id: 3, name: 'Studio Box Tee', category: 'T-Shirts', price: 18500, tag: '', color: 'Washed Black', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85' },
-  { id: 4, name: 'Utility Cargo Trouser', category: 'Trousers', price: 51000, tag: 'LIMITED', color: 'Graphite', image: 'https://images.unsplash.com/photo-1517438476312-10d79c077509?auto=format&fit=crop&w=900&q=85' },
-  { id: 5, name: 'Noir Puffer Jacket', category: 'Jackets', price: 96000, tag: 'EDITOR PICK', color: 'Midnight', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=85' },
-  { id: 6, name: 'Mono Court Sneaker', category: 'Sneakers', price: 73500, tag: '', color: 'Chalk / Ink', image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=900&q=85' },
-  { id: 7, name: 'Everyday Layer Longsleeve', category: 'T-Shirts', price: 26000, tag: '', color: 'Stone', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=85' },
-  { id: 8, name: 'Night Shift Overshirt', category: 'Jackets', price: 58000, tag: 'JUST IN', color: 'Black', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=900&q=85' },
+  { id: 1, stock_quantity: 99, name: 'Essential Heavyweight Hoodie', category: 'Hoodies', price: 42000, tag: 'BESTSELLER', color: 'Obsidian', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85' },
+  { id: 2, stock_quantity: 99, name: 'After Hours Runner', category: 'Sneakers', price: 68500, tag: 'NEW DROP', color: 'Silver / Black', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85' },
+  { id: 3, stock_quantity: 99, name: 'Studio Box Tee', category: 'T-Shirts', price: 18500, tag: '', color: 'Washed Black', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85' },
+  { id: 4, stock_quantity: 99, name: 'Utility Cargo Trouser', category: 'Trousers', price: 51000, tag: 'LIMITED', color: 'Graphite', image: 'https://images.unsplash.com/photo-1517438476312-10d79c077509?auto=format&fit=crop&w=900&q=85' },
+  { id: 5, stock_quantity: 99, name: 'Noir Puffer Jacket', category: 'Jackets', price: 96000, tag: 'EDITOR PICK', color: 'Midnight', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=85' },
+  { id: 6, stock_quantity: 99, name: 'Mono Court Sneaker', category: 'Sneakers', price: 73500, tag: '', color: 'Chalk / Ink', image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=900&q=85' },
+  { id: 7, stock_quantity: 99, name: 'Everyday Layer Longsleeve', category: 'T-Shirts', price: 26000, tag: '', color: 'Stone', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=85' },
+  { id: 8, stock_quantity: 99, name: 'Night Shift Overshirt', category: 'Jackets', price: 58000, tag: 'JUST IN', color: 'Black', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=900&q=85' },
 ]
 const categories = ['All pieces', 'Hoodies', 'Sneakers', 'T-Shirts', 'Trousers', 'Jackets']
 const money = (n) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(n)
@@ -55,13 +55,13 @@ function App() {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (alive) setAuthUser(session?.user ?? null)
     })
-    supabase.from('products').select('id,name,category,price_rwf,image_url,color,tag')
+    supabase.from('products').select('id,name,category,price_rwf,image_url,color,tag,stock_quantity')
       .eq('is_active', true).order('created_at', { ascending: true })
       .then(({ data, error }) => {
         if (alive && !error && data?.length) {
           setCatalogProducts(data.map((p) => ({
             id: p.id, name: p.name, category: p.category, price: p.price_rwf,
-            image: p.image_url, color: p.color || 'Core', tag: p.tag || ''
+            image: p.image_url, color: p.color || 'Core', tag: p.tag || '', stock_quantity: Number(p.stock_quantity) || 0
           })))
         }
       })
@@ -148,6 +148,16 @@ function App() {
     notify(exists ? 'Removed from your wishlist' : 'Saved to your wishlist')
   }
   const addToCart = async (product) => {
+    const availableStock = Number(product.stock_quantity ?? 0)
+    const alreadyInCart = cart.filter((item) => String(item.id) === String(product.id)).length
+    if (availableStock <= 0) {
+      notify('This piece is currently out of stock')
+      return
+    }
+    if (alreadyInCart >= availableStock) {
+      notify(`Only ${availableStock} available for this piece`)
+      return
+    }
     setCart((old) => [...old, product])
     if (authUser && typeof product.id === 'string') {
       const { data } = await supabase.from('cart_items').select('quantity').eq('user_id', authUser.id).eq('product_id', product.id).maybeSingle()
@@ -232,8 +242,8 @@ function App() {
           <div className="filter-row">{categories.map((c) => <button key={c} className={category === c ? 'filter-chip active' : 'filter-chip'} onClick={() => setCategory(c)}>{c}</button>)}</div>
           <div className="product-grid">
             {visibleProducts.map((p, i) => <motion.article className="product-card" key={p.id} layout initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .04 }}>
-              <div className="product-image-wrap"><img src={p.image} alt={p.name} loading="lazy" /><div className="product-topline">{p.tag && <span className="product-tag">{p.tag}</span>}<button className={wishlist.includes(p.id) ? 'wish-button selected' : 'wish-button'} aria-label={wishlist.includes(p.id) ? 'Remove from wishlist' : 'Add to wishlist'} onClick={() => toggleWish(p.id)}><Heart size={17} fill={wishlist.includes(p.id) ? 'currentColor' : 'none'} /></button></div><button className="quick-add" onClick={() => addToCart(p)}>ADD TO BAG <span>+</span></button></div>
-              <div className="product-meta"><div><p className="product-category">{p.category} / {p.color}</p><h3>{p.name}</h3></div><strong>{money(p.price)}</strong></div>
+              <div className="product-image-wrap"><img src={p.image} alt={p.name} loading="lazy" /><div className="product-topline">{p.tag && <span className="product-tag">{p.tag}</span>}<button className={wishlist.includes(p.id) ? 'wish-button selected' : 'wish-button'} aria-label={wishlist.includes(p.id) ? 'Remove from wishlist' : 'Add to wishlist'} onClick={() => toggleWish(p.id)}><Heart size={17} fill={wishlist.includes(p.id) ? 'currentColor' : 'none'} /></button></div><button className="quick-add" onClick={() => addToCart(p)} disabled={Number(p.stock_quantity ?? 0) <= 0}>{Number(p.stock_quantity ?? 0) <= 0 ? 'SOLD OUT' : 'ADD TO BAG'} <span>{Number(p.stock_quantity ?? 0) <= 0 ? '×' : '+'}</span></button></div>
+              <div className="product-meta"><div><p className="product-category">{p.category} / {p.color}</p><h3>{p.name}</h3></div><strong>{money(p.price)}</strong></div>{Number(p.stock_quantity ?? 0) > 0 && Number(p.stock_quantity) <= 5 && <p className="product-stock-note">ONLY {p.stock_quantity} LEFT</p>}
             </motion.article>)}
           </div>
           {visibleProducts.length === 0 && <div className="empty-state">NO PIECES FOUND. TRY ANOTHER SEARCH.</div>}
