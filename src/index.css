@@ -56,3 +56,26 @@
 .saved-look-row>span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .saved-look-dots{display:flex;padding-left:3px}
 .saved-look-dots i{display:block;width:15px;height:15px;border-radius:50%;border:1px solid #777;margin-left:-3px}
+
+
+/* Checkout and delivery form */
+.checkout-backdrop{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.84);backdrop-filter:blur(9px);display:grid;place-items:center;padding:18px}
+.checkout-panel{position:relative;width:min(100%,560px);max-height:94vh;overflow:auto;background:#111;border:1px solid #383838;color:#f5f3ef;padding:clamp(24px,5vw,44px)}
+.checkout-close{position:absolute;right:15px;top:15px}
+.checkout-panel h2{font-size:clamp(30px,5vw,46px);line-height:.98;letter-spacing:-.05em;margin:14px 0}
+.checkout-panel h2 em{font-family:Georgia,serif;font-weight:400}
+.checkout-intro{font-size:12px;color:#aaa;line-height:1.7;margin-bottom:22px;max-width:420px}
+.checkout-form{display:grid;gap:15px}
+.checkout-form label{display:grid;gap:7px;font-size:10px;letter-spacing:.12em;color:#aaa}
+.checkout-form input,.checkout-form textarea{width:100%;min-width:0;background:#191919;border:1px solid #393939;color:#fff;padding:13px;font:inherit;font-size:13px;letter-spacing:normal;resize:vertical}
+.checkout-form input:focus,.checkout-form textarea:focus{outline:none;border-color:#d6d0c6}
+.optional-label{font-size:9px;color:#777}
+.checkout-error{font-size:12px;line-height:1.5;color:#f0a9a9;overflow-wrap:anywhere}
+.checkout-form button:disabled{opacity:.6;cursor:wait}
+.checkout-footnote{font-size:10px;line-height:1.7;color:#888;margin-top:16px}
+.checkout-success{text-align:center;padding:18px 0 4px}
+.checkout-success>svg{color:#d7c9ad;margin-bottom:18px}
+.checkout-success>p:not(.eyebrow){font-size:12px;line-height:1.7;color:#aaa;max-width:330px;margin:12px auto 22px}
+.order-reference{display:grid;gap:7px;background:#191919;border:1px solid #333;padding:16px;margin-bottom:22px}
+.order-reference span{font-size:9px;letter-spacing:.15em;color:#888}
+.order-reference strong{font-size:20px;letter-spacing:.12em}
