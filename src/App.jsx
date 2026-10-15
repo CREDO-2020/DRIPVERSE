@@ -62,6 +62,32 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    let alive = true
+    async function loadPersonalData() {
+      if (!authUser) {
+        setWishlist([])
+        setCart([])
+        return
+      }
+      const [wishResult, cartResult] = await Promise.all([
+        supabase.from('wishlist_items').select('product_id').eq('user_id', authUser.id),
+        supabase.from('cart_items').select('product_id,quantity').eq('user_id', authUser.id)
+      ])
+      if (!alive) return
+      if (!wishResult.error) setWishlist((wishResult.data || []).map(row => row.product_id))
+      if (!cartResult.error) {
+        const quantities = cartResult.data || []
+        setCart(quantities.flatMap(row => {
+          const product = catalogProducts.find(p => String(p.id) === String(row.product_id))
+          return product ? Array.from({ length: row.quantity }, () => product) : []
+        }))
+      }
+    }
+    loadPersonalData()
+    return () => { alive = false }
+  }, [authUser, catalogProducts])
+
   const submitAuth = async (event) => {
     event.preventDefault()
     setAuthBusy(true)
@@ -98,14 +124,40 @@ function App() {
     setToast(message)
     window.setTimeout(() => setToast(''), 2200)
   }
-  const toggleWish = (id) => {
+  const toggleWish = async (id) => {
     const exists = wishlist.includes(id)
     setWishlist((old) => exists ? old.filter((x) => x !== id) : [...old, id])
+    if (authUser && typeof id === 'string') {
+      if (exists) {
+        const { error } = await supabase.from('wishlist_items').delete().eq('user_id', authUser.id).eq('product_id', id)
+        if (error) notify('Wishlist update failed. Please try again.')
+      } else {
+        const { error } = await supabase.from('wishlist_items').upsert({ user_id: authUser.id, product_id: id }, { onConflict: 'user_id,product_id', ignoreDuplicates: true })
+        if (error) notify('Wishlist could not be synced.')
+      }
+    } else if (!authUser) notify('Sign in to save your wishlist across devices')
     notify(exists ? 'Removed from your wishlist' : 'Saved to your wishlist')
   }
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
     setCart((old) => [...old, product])
+    if (authUser && typeof product.id === 'string') {
+      const { data } = await supabase.from('cart_items').select('quantity').eq('user_id', authUser.id).eq('product_id', product.id).maybeSingle()
+      const nextQuantity = Math.min((data?.quantity || 0) + 1, 99)
+      const { error } = await supabase.from('cart_items').upsert({ user_id: authUser.id, product_id: product.id, quantity: nextQuantity }, { onConflict: 'user_id,product_id' })
+      if (error) notify('Bag could not be synced. Please try again.')
+    } else if (!authUser) notify('Sign in to keep your bag saved')
     notify('Added to your bag')
+  }
+  const removeCartItem = async (product, index) => {
+    setCart(old => old.filter((_, i) => i !== index))
+    if (authUser && typeof product.id === 'string') {
+      const remaining = cart.filter((p, i) => i !== index).filter(p => String(p.id) === String(product.id)).length
+      if (remaining === 0) {
+        await supabase.from('cart_items').delete().eq('user_id', authUser.id).eq('product_id', product.id)
+      } else {
+        await supabase.from('cart_items').update({ quantity: remaining }).eq('user_id', authUser.id).eq('product_id', product.id)
+      }
+    }
   }
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -211,7 +263,7 @@ function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => setCart((old) => old.filter((_, index) => index !== i))}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => notify('Checkout is not connected to payments yet')}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
+        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => removeCartItem(p, i)}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => notify('Checkout is not connected to payments yet')}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
       </AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="toast" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }}><Check size={16} />{toast}</motion.div>}</AnimatePresence>
     </div>
