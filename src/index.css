@@ -248,3 +248,7 @@
 .studio-accessory-option.is-selected{border-color:#d7c9ad;color:#f5f3ef;background:#25231f}
 .studio-reset-button{align-self:flex-start;padding:0;border:0;background:transparent;color:#999;font-size:9px;letter-spacing:.12em;text-decoration:underline;text-underline-offset:4px}
 @media(max-width:560px){.account-tracking-step{font-size:7px}.account-tracking-step i{width:19px;height:19px}.account-tracking-heading{flex-wrap:wrap}.account-tracking-heading small{margin-left:auto}}
+
+
+.account-delete-look{display:flex;align-items:center;gap:7px;margin-top:9px;padding:0;border:0;background:transparent;color:#9a7777;font-size:9px;letter-spacing:.08em;cursor:pointer}
+.account-delete-look:disabled{opacity:.55;cursor:wait}
