@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, CheckCircle2, Clock3, Package, Shirt, UserRound, X, MapPin, Pencil, Truck } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clock3, Package, Shirt, UserRound, X, MapPin, Pencil, Truck, Trash2 } from 'lucide-react'
 import { supabase } from './lib/supabase.js'
 
 const money = (amount) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF', maximumFractionDigits: 0 }).format(amount || 0)
@@ -31,6 +31,7 @@ export default function AccountModal({ user, onClose, onEditLook, onSignOut, not
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [deletingLookId, setDeletingLookId] = useState('')
 
   useEffect(() => {
     let active = true
@@ -57,6 +58,19 @@ export default function AccountModal({ user, onClose, onEditLook, onSignOut, not
     loadAccount()
     return () => { active = false }
   }, [user])
+
+  async function deleteLook(look) {
+    if (!window.confirm(`Delete the saved look "${look.name}"? This cannot be undone.`)) return
+    setDeletingLookId(look.id)
+    const { error } = await supabase.from('outfits').delete().eq('id', look.id).eq('user_id', user.id)
+    setDeletingLookId('')
+    if (error) {
+      setMessage('Could not delete this saved look. Please try again.')
+      return
+    }
+    setLooks(old => old.filter(item => item.id !== look.id))
+    notify('Saved look deleted')
+  }
 
   async function saveProfile(event) {
     event.preventDefault()
@@ -110,7 +124,7 @@ export default function AccountModal({ user, onClose, onEditLook, onSignOut, not
           </section>}
           {tab === 'looks' && <section className="account-section">
             <div className="account-section-title"><div><p className="eyebrow">STYLE LAB</p><h3>SAVED LOOKS <span>({looks.length})</span></h3></div><Shirt size={22}/></div>
-            {looks.length === 0 ? <div className="account-empty"><Shirt size={28}/><h4>Your style archive is empty.</h4><p>Build a look in the 3D Studio and save it to see it here.</p><button className="button button-light" onClick={onClose}>GO TO THE STUDIO <ArrowRight size={15}/></button></div> : <div className="account-look-grid">{looks.map((look) => <article className="account-look-card" key={look.id}><div className="account-look-colors"><i style={{ background: look.avatar_config?.top || '#191919' }}/><i style={{ background: look.avatar_config?.pants || '#383838' }}/><i style={{ background: look.avatar_config?.shoes || '#e6e1d8' }}/></div><h4>{look.name}</h4><p>Saved {new Date(look.created_at).toLocaleDateString('en-RW', { year: 'numeric', month: 'short', day: 'numeric' })}</p><span><CheckCircle2 size={13}/> SAVED TO YOUR ACCOUNT</span><button className="account-edit-look" onClick={() => onEditLook?.(look)}><Pencil size={13}/> CUSTOMIZE THIS LOOK <ArrowRight size={13}/></button></article>)}</div>}
+            {looks.length === 0 ? <div className="account-empty"><Shirt size={28}/><h4>Your style archive is empty.</h4><p>Build a look in the 3D Studio and save it to see it here.</p><button className="button button-light" onClick={onClose}>GO TO THE STUDIO <ArrowRight size={15}/></button></div> : <div className="account-look-grid">{looks.map((look) => <article className="account-look-card" key={look.id}><div className="account-look-colors"><i style={{ background: look.avatar_config?.top || '#191919' }}/><i style={{ background: look.avatar_config?.pants || '#383838' }}/><i style={{ background: look.avatar_config?.shoes || '#e6e1d8' }}/></div><h4>{look.name}</h4><p>Saved {new Date(look.created_at).toLocaleDateString('en-RW', { year: 'numeric', month: 'short', day: 'numeric' })}</p><span><CheckCircle2 size={13}/> SAVED TO YOUR ACCOUNT</span><button className="account-edit-look" onClick={() => onEditLook?.(look)}><Pencil size={13}/> CUSTOMIZE THIS LOOK <ArrowRight size={13}/></button><button className="account-delete-look" onClick={() => deleteLook(look)} disabled={deletingLookId === look.id}>{deletingLookId === look.id ? 'DELETING…' : <><Trash2 size={13}/> DELETE SAVED LOOK</>}</button></article>)}</div>}
           </section>}
           {tab === 'profile' && <section className="account-section">
             <div className="account-section-title"><div><p className="eyebrow">ACCOUNT SETTINGS</p><h3>YOUR DETAILS</h3></div><UserRound size={22}/></div>
