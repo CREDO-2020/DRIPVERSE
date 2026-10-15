@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase.js'
+import StudioModal from './StudioModal.jsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, Check, Heart, Menu,
@@ -23,6 +24,7 @@ function App() {
   const [catalogProducts, setCatalogProducts] = useState(products)
   const [authUser, setAuthUser] = useState(null)
   const [authOpen, setAuthOpen] = useState(false)
+  const [studioOpen, setStudioOpen] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -234,7 +236,7 @@ function App() {
         <section className="studio-banner" id="studio">
           <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1800&q=85" alt="Fashion studio editorial" loading="lazy" />
           <div className="studio-overlay" />
-          <div className="studio-copy"><p className="eyebrow"><Sparkles size={14} /> YOUR LOOK. YOUR LOGIC.</p><h2>DON'T JUST<br />WEAR IT.<br /><em>MAKE IT YOURS.</em></h2><p>Step into a new way to style. Build your rotation, experiment with combinations, and find your next signature look.</p><button className="button button-light" onClick={() => notify('The interactive 3D avatar studio is the next build phase')}>DISCOVER THE STUDIO <ArrowUpRight size={16} /></button></div>
+          <div className="studio-copy"><p className="eyebrow"><Sparkles size={14} /> YOUR LOOK. YOUR LOGIC.</p><h2>DON'T JUST<br />WEAR IT.<br /><em>MAKE IT YOURS.</em></h2><p>Step into a new way to style. Build your rotation, experiment with combinations, and find your next signature look.</p><button className="button button-light" onClick={() => setStudioOpen(true)}>DISCOVER THE STUDIO <ArrowUpRight size={16} /></button></div>
           <span className="studio-stamp">DRIPVERSE<br />STYLE LAB / 001</span>
         </section>
 
@@ -261,6 +263,8 @@ function App() {
           </motion.section>
         </motion.div>}
       </AnimatePresence>
+
+      {studioOpen && <StudioModal user={authUser} onClose={() => setStudioOpen(false)} notify={notify} />}
 
       <AnimatePresence>
         {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => removeCartItem(p, i)}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => notify('Checkout is not connected to payments yet')}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
