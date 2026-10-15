@@ -84,11 +84,9 @@ A GitHub Actions workflow also runs the production build when code is pushed to 
 ## Still needed before a commercial launch
 
 - **Payments:** no payment provider is connected. Orders created through checkout remain `pending`; the app does not collect money or mark orders paid.
-- **Payments:** no payment provider is connected. Orders created through checkout remain `pending`; the app does not collect money or mark orders paid.
-- **Admin authorization setup:** the admin dashboard is restricted to accounts whose trusted Supabase `app_metadata.role` is set to `admin`. Follow the setup steps below before expecting the ADMIN navigation link to appear.
-- **Production testing:** run the GitHub Actions build and manually test authentication, cart sync, checkout, account history, admin product updates, order status changes, and WebGL on desktop and mobile before launch.
+- **Admin authorization setup:** the dashboard is restricted to accounts whose trusted Supabase `app_metadata.role` is set to `admin`. Follow the setup steps above before expecting the ADMIN navigation link to appear.
+- **Production testing:** manually test authentication, cart sync, checkout, account history, admin product updates, order status changes, and WebGL on desktop and mobile before launch.
 - **Real 3D assets:** the studio currently uses a stylized procedural 3D avatar, not a detailed rigged fashion model or real garment simulations.
-- **Production testing:** run the GitHub Actions build and manually test authentication, cart sync, checkout, and WebGL on desktop and mobile before launch.
 - **Product photography:** Unsplash photos are visual placeholders. Replace them with appropriately licensed product photography and verified inventory/prices.
 
 ## Security notes
