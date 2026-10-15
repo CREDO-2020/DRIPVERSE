@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase.js'
+import { canAddProductToCart, getCartSummary, groupCart } from './lib/cartMath.js'
 import StudioModal from './StudioModal.jsx'
 import CheckoutModal from './CheckoutModal.jsx'
 import AccountModal from './AccountModal.jsx'
@@ -129,20 +130,8 @@ function App() {
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
   ), [catalogProducts, category, search])
 
-  const groupedCart = useMemo(() => {
-    const grouped = new Map()
-    cart.forEach((product) => {
-      const key = String(product.id)
-      const current = grouped.get(key)
-      if (current) current.quantity += 1
-      else grouped.set(key, { product, quantity: 1 })
-    })
-    return Array.from(grouped.values())
-  }, [cart])
-
-  const cartSubtotal = cart.reduce((sum, product) => sum + Number(product.price || 0), 0)
-  const cartShipping = cartSubtotal === 0 || cartSubtotal >= 150000 ? 0 : 3000
-  const cartTotal = cartSubtotal + cartShipping
+  const groupedCart = useMemo(() => groupCart(cart), [cart])
+  const { subtotal: cartSubtotal, shipping: cartShipping, total: cartTotal } = getCartSummary(cart)
 
   const notify = (message) => {
     setToast(message)
@@ -163,14 +152,11 @@ function App() {
     notify(exists ? 'Removed from your wishlist' : 'Saved to your wishlist')
   }
   const addToCart = async (product) => {
-    const availableStock = Number(product.stock_quantity ?? 0)
-    const alreadyInCart = cart.filter((item) => String(item.id) === String(product.id)).length
-    if (availableStock <= 0) {
-      notify('This piece is currently out of stock')
-      return
-    }
-    if (alreadyInCart >= availableStock) {
-      notify(`Only ${availableStock} available for this piece`)
+    const stockCheck = canAddProductToCart(cart, product)
+    if (!stockCheck.ok) {
+      notify(stockCheck.reason === 'out_of_stock'
+        ? 'This piece is currently out of stock'
+        : `Only ${stockCheck.availableStock} available for this piece`)
       return
     }
     setCart((old) => [...old, product])
