@@ -48,3 +48,11 @@
 .save-look{margin-top:auto}
 .studio-save-message,.studio-login-note{font-size:12px;line-height:1.6;color:#d5c8ae}
 @media(max-width:760px){.studio-layout{grid-template-columns:1fr}.avatar-stage{height:400px;min-height:360px}.studio-controls{gap:18px}.studio-modal{padding:22px 16px}.studio-modal-heading{padding-right:25px}}
+
+.saved-looks{border-top:1px solid #303030;padding-top:16px}
+.saved-looks>.eyebrow{margin-bottom:10px}
+.saved-looks>span{display:block;font-size:11px;color:#999;line-height:1.6}
+.saved-look-row{width:100%;display:flex;align-items:center;gap:10px;background:transparent;border:0;border-bottom:1px solid #292929;color:#eee;text-align:left;padding:11px 0;cursor:pointer;font-size:12px}
+.saved-look-row>span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-look-dots{display:flex;padding-left:3px}
+.saved-look-dots i{display:block;width:15px;height:15px;border-radius:50%;border:1px solid #777;margin-left:-3px}
