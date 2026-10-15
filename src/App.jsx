@@ -28,6 +28,7 @@ function App() {
   const [authUser, setAuthUser] = useState(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [studioOpen, setStudioOpen] = useState(false)
+  const [studioInitialLook, setStudioInitialLook] = useState(null)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
@@ -270,9 +271,9 @@ function App() {
         </motion.div>}
       </AnimatePresence>
 
-      {studioOpen && <StudioModal user={authUser} onClose={() => setStudioOpen(false)} notify={notify} />}
+      {studioOpen && <StudioModal user={authUser} initialLook={studioInitialLook} onClose={() => { setStudioOpen(false); setStudioInitialLook(null) }} notify={notify} />}
       {adminOpen && authUser?.app_metadata?.role === 'admin' && <AdminModal user={authUser} onClose={() => setAdminOpen(false)} notify={notify} />}
-      {accountOpen && authUser && <AccountModal user={authUser} onClose={() => setAccountOpen(false)} onSignOut={async () => { await supabase.auth.signOut(); setAccountOpen(false); notify('Signed out successfully') }} notify={notify} />}
+      {accountOpen && authUser && <AccountModal user={authUser} onClose={() => setAccountOpen(false)} onEditLook={(look) => { setAccountOpen(false); setStudioInitialLook(look); setStudioOpen(true) }} onSignOut={async () => { await supabase.auth.signOut(); setAccountOpen(false); notify('Signed out successfully') }} notify={notify} />}
       {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} onOrderCreated={() => { setCart([]); setDrawer(''); notify('Order created — payment is still pending') }} />}
 
       <AnimatePresence>
