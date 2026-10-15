@@ -114,3 +114,4 @@ export default function AccountModal({ user, onClose, onSignOut, notify }) {
       <div className="account-footer"><span>DRIPVERSE® · KIGALI, RWANDA</span><button onClick={onSignOut}>SIGN OUT <ArrowRight size={14}/></button></div>
     </section>
   </div>
+}
