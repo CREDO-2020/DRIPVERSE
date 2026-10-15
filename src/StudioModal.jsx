@@ -48,15 +48,6 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
   }, [initialLook])
 
   useEffect(() => {
-    if (!initialLook) return
-    setLookName(initialLook.name || 'My look')
-    setTop(initialLook.avatar_config?.top || palettes[0].value)
-    setPants(initialLook.avatar_config?.pants || '#383838')
-    setShoes(initialLook.avatar_config?.shoes || '#e6e1d8')
-    setAccessory(initialLook.avatar_config?.accessory || 'none')
-  }, [initialLook])
-
-  useEffect(() => {
     let active = true
     if (!user) { setSavedLooks([]); return () => { active = false } }
     supabase.from('outfits').select('id,name,avatar_config,created_at').eq('user_id', user.id).order('created_at', { ascending: false })
@@ -71,21 +62,29 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
     }
     setSaving(true)
     setMessage('')
-    const { data, error } = await supabase.from('outfits').insert({
+    const outfit = {
       user_id: user.id,
       name: lookName.trim() || 'My look',
       avatar_config: { top, pants, shoes, accessory },
       is_public: false,
-    }).select('id,name,avatar_config,created_at').single()
+    }
+    const query = initialLook?.id
+      ? supabase.from('outfits').update(outfit).eq('id', initialLook.id).eq('user_id', user.id)
+      : supabase.from('outfits').insert(outfit)
+    const { data, error } = await query.select('id,name,avatar_config,created_at').single()
     setSaving(false)
     if (error) setMessage('Could not save this look. Please try again.')
-    else { setSavedLooks(old => [data, ...old]); setMessage('Look saved to your account.'); notify('Your look has been saved') }
+    else {
+      setSavedLooks(old => initialLook?.id ? old.map(look => look.id === data.id ? data : look) : [data, ...old])
+      setMessage(initialLook?.id ? 'Saved outfit updated.' : 'Look saved to your account.')
+      notify(initialLook?.id ? 'Your saved look was updated' : 'Your look has been saved')
+    }
   }
 
   return <div className="studio-modal-backdrop" onClick={onClose}>
     <section className="studio-modal" onClick={e => e.stopPropagation()}>
       <button className="studio-close icon-button" onClick={onClose} aria-label="Close studio"><X/></button>
-      <div className="studio-modal-heading"><p className="eyebrow">DRIPVERSE STYLE LAB / 001</p><h2>BUILD YOUR <em>UNIFORM.</em></h2><p>Rotate the avatar and experiment with color combinations.</p></div>
+      <div className="studio-modal-heading"><p className="eyebrow">DRIPVERSE STYLE LAB / 001</p><h2>{initialLook ? 'EDIT YOUR ' : 'BUILD YOUR '}<em>{initialLook ? 'LOOK.' : 'UNIFORM.'}</em></h2><p>Rotate the avatar and experiment with color combinations.</p></div>
       <div className="studio-layout">
         <div className="avatar-stage"><Canvas camera={{ position: [3.2, 2.1, 4.5], fov: 38 }} shadows><color attach="background" args={['#171717']}/><ambientLight intensity={1.3}/><directionalLight position={[4,6,4]} intensity={2} castShadow/><pointLight position={[-3,2,-2]} intensity={18} color="#9a8b70"/><Avatar topColor={top} pantsColor={pants} shoeColor={shoes} accessory={accessory}/><ContactShadows position={[0,-1.3,0]} opacity={0.4} scale={4} blur={2.5}/><OrbitControls enablePan={false} minDistance={3} maxDistance={7} minPolarAngle={0.7} maxPolarAngle={2.2}/></Canvas><span className="stage-label">INTERACTIVE 3D / DRAG TO ROTATE</span></div>
         <div className="studio-controls">
@@ -95,9 +94,7 @@ export default function StudioModal({ user, initialLook = null, onClose, notify 
           <div className="swatch-group"><p>03 / SNEAKERS</p><div className="swatch-row">{['#e6e1d8','#1a1a1a','#8a8a8a'].map(c=><button key={c} aria-label={'Sneakers '+c} className={shoes===c?'color-swatch chosen':'color-swatch'} style={{background:c}} onClick={()=>setShoes(c)}>{shoes===c&&<Check size={14} color={c==='#e6e1d8'?'#111':'white'}/>}</button>)}</div></div>
           <div className="swatch-group studio-accessory-group"><p>04 / ACCESSORIES</p><div className="studio-accessory-options">{[{ value: 'none', label: 'None' }, { value: 'cap', label: 'Cap' }, { value: 'chain', label: 'Chain' }, { value: 'crossbody', label: 'Crossbody' }].map(option => <button key={option.value} className={accessory === option.value ? 'studio-accessory-option is-selected' : 'studio-accessory-option'} onClick={() => setAccessory(option.value)} aria-pressed={accessory === option.value}>{option.label}</button>)}</div></div>
           <button className="studio-reset-button" onClick={() => { setTop(palettes[0].value); setPants('#252525'); setShoes('#e6e1d8'); setAccessory('none'); setLookName('Midnight uniform'); setMessage('Outfit reset to the Midnight uniform.') }}>RESET OUTFIT</button>
-          <div className="swatch-group studio-accessory-group"><p>04 / ACCESSORIES</p><div className="studio-accessory-options">{[{ value: 'none', label: 'None' }, { value: 'cap', label: 'Cap' }, { value: 'chain', label: 'Chain' }, { value: 'crossbody', label: 'Crossbody' }].map(option => <button key={option.value} className={accessory === option.value ? 'studio-accessory-option is-selected' : 'studio-accessory-option'} onClick={() => setAccessory(option.value)} aria-pressed={accessory === option.value}>{option.label}</button>)}</div></div>
-          <button className="studio-reset-button" onClick={() => { setTop(palettes[0].value); setPants('#252525'); setShoes('#e6e1d8'); setAccessory('none'); setLookName('Midnight uniform'); setMessage('Outfit reset to the Midnight uniform.') }}>RESET OUTFIT</button>
-          <button className="button button-light full-button save-look" onClick={saveLook} disabled={saving}>{saving?'SAVING LOOK…':'SAVE THIS LOOK'} <ArrowRight size={16}/></button>
+          <button className="button button-light full-button save-look" onClick={saveLook} disabled={saving}>{saving?'SAVING LOOK…':initialLook ? 'UPDATE SAVED LOOK' : 'SAVE THIS LOOK'} <ArrowRight size={16}/></button>
           {message&&<p className="studio-save-message" role="status">{message}</p>}
           {!user&&<p className="studio-login-note">Sign in to keep your custom looks saved to your profile.</p>}
           {user&&<div className="saved-looks"><p className="eyebrow">YOUR SAVED LOOKS · {savedLooks.length}</p>{savedLooks.length===0?<span>Your first saved look will appear here.</span>:savedLooks.slice(0,4).map(look=><button className="saved-look-row" key={look.id} onClick={()=>{setLookName(look.name);setTop(look.avatar_config?.top||palettes[0].value);setPants(look.avatar_config?.pants||'#383838');setShoes(look.avatar_config?.shoes||'#e6e1d8');setAccessory(look.avatar_config?.accessory||'none')}}><span className="saved-look-dots"><i style={{background:look.avatar_config?.top||'#191919'}}/><i style={{background:look.avatar_config?.pants||'#383838'}}/><i style={{background:look.avatar_config?.shoes||'#e6e1d8'}}/></span><span>{look.name}</span><ArrowRight size={13}/></button>)}</div>}
