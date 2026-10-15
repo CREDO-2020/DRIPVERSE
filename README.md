@@ -58,9 +58,12 @@ npm run dev
 
 Open the local URL printed by Vite, usually http://localhost:5173.
 
-## Production build
+## Tests and production build
+
+Run the automated cart pricing, delivery-fee, grouping, and stock-limit tests before building:
 
 ```powershell
+npm test
 npm run build
 npm run preview
 ```
@@ -93,4 +96,5 @@ A GitHub Actions workflow also runs the production build when code is pushed to 
 
 - Only the Supabase publishable key belongs in `.env.local` for the frontend. Never expose a service-role or secret key in browser code.
 - Environment variables prefixed with `VITE_` are bundled into the client.
+- In the Supabase dashboard, open **Authentication → Settings / Password Security** and enable **Leaked password protection** before launch. The security advisor currently reports this setting as disabled.
 - Order creation is handled by a database function that uses the signed-in user's identity and calculates totals from database prices. It creates a pending order only; payment confirmation is not implemented yet.
