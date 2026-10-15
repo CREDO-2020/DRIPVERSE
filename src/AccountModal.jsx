@@ -65,7 +65,7 @@ export default function AccountModal({ user, onClose, onEditLook, onSignOut, not
     const { error } = await supabase.from('outfits').delete().eq('id', look.id).eq('user_id', user.id)
     setDeletingLookId('')
     if (error) {
-      setMessage('Could not delete this saved look. Please try again.')
+      notify('Could not delete this saved look. Please try again.')
       return
     }
     setLooks(old => old.filter(item => item.id !== look.id))
