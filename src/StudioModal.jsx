@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, ContactShadows } from '@react-three/drei'
 import { ArrowRight, Check, X } from 'lucide-react'
@@ -32,6 +32,15 @@ export default function StudioModal({ user, onClose, notify }) {
   const [lookName, setLookName] = useState('Midnight uniform')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [savedLooks, setSavedLooks] = useState([])
+
+  useEffect(() => {
+    let active = true
+    if (!user) { setSavedLooks([]); return () => { active = false } }
+    supabase.from('outfits').select('id,name,avatar_config,created_at').eq('user_id', user.id).order('created_at', { ascending: false })
+      .then(({ data, error }) => { if (active && !error) setSavedLooks(data || []) })
+    return () => { active = false }
+  }, [user])
 
   async function saveLook() {
     if (!user) {
@@ -40,15 +49,15 @@ export default function StudioModal({ user, onClose, notify }) {
     }
     setSaving(true)
     setMessage('')
-    const { error } = await supabase.from('outfits').insert({
+    const { data, error } = await supabase.from('outfits').insert({
       user_id: user.id,
       name: lookName.trim() || 'My look',
       avatar_config: { top, pants, shoes },
       is_public: false,
-    })
+    }).select('id,name,avatar_config,created_at').single()
     setSaving(false)
     if (error) setMessage('Could not save this look. Please try again.')
-    else { setMessage('Look saved to your account.'); notify('Your look has been saved') }
+    else { setSavedLooks(old => [data, ...old]); setMessage('Look saved to your account.'); notify('Your look has been saved') }
   }
 
   return <div className="studio-modal-backdrop" onClick={onClose}>
@@ -65,6 +74,7 @@ export default function StudioModal({ user, onClose, notify }) {
           <button className="button button-light full-button save-look" onClick={saveLook} disabled={saving}>{saving?'SAVING LOOK…':'SAVE THIS LOOK'} <ArrowRight size={16}/></button>
           {message&&<p className="studio-save-message" role="status">{message}</p>}
           {!user&&<p className="studio-login-note">Sign in to keep your custom looks saved to your profile.</p>}
+          {user&&<div className="saved-looks"><p className="eyebrow">YOUR SAVED LOOKS · {savedLooks.length}</p>{savedLooks.length===0?<span>Your first saved look will appear here.</span>:savedLooks.slice(0,4).map(look=><button className="saved-look-row" key={look.id} onClick={()=>{setLookName(look.name);setTop(look.avatar_config?.top||palettes[0].value);setPants(look.avatar_config?.pants||'#383838');setShoes(look.avatar_config?.shoes||'#e6e1d8')}}><span className="saved-look-dots"><i style={{background:look.avatar_config?.top||'#191919'}}/><i style={{background:look.avatar_config?.pants||'#383838'}}/><i style={{background:look.avatar_config?.shoes||'#e6e1d8'}}/></span><span>{look.name}</span><ArrowRight size={13}/></button>)}</div>}
         </div>
       </div>
     </section>
