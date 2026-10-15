@@ -252,3 +252,8 @@
 
 .account-delete-look{display:flex;align-items:center;gap:7px;margin-top:9px;padding:0;border:0;background:transparent;color:#9a7777;font-size:9px;letter-spacing:.08em;cursor:pointer}
 .account-delete-look:disabled{opacity:.55;cursor:wait}
+
+
+/* Stock-aware storefront labels */
+.quick-add:disabled{opacity:.62;cursor:not-allowed;background:#262626;color:#aaa}
+.product-stock-note{margin:7px 0 0;font-size:9px;letter-spacing:.1em;color:#c7ad82}
