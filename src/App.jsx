@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase.js'
 import StudioModal from './StudioModal.jsx'
 import CheckoutModal from './CheckoutModal.jsx'
 import AccountModal from './AccountModal.jsx'
+import AdminModal from './AdminModal.jsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, Check, Heart, Menu,
@@ -29,6 +30,7 @@ function App() {
   const [studioOpen, setStudioOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -185,7 +187,7 @@ function App() {
           <button className="icon-button" aria-label="Search" onClick={() => setSearchOpen(!searchOpen)}><Search size={19} /></button>
           <button className="icon-button wishlist-nav" aria-label="Open wishlist" onClick={() => setDrawer('wishlist')}><Heart size={19} /><span className="action-count">{wishlist.length}</span></button>
           <button className="icon-button" aria-label="Open shopping bag" onClick={() => setDrawer('cart')}><ShoppingBag size={19} /><span className="action-count">{cart.length}</span></button>
-          <button className="account-link" onClick={() => { if (authUser) setAccountOpen(true); else { setAuthMode('signin'); setAuthMessage(''); setAuthOpen(true) } }}>{authUser ? 'SIGN OUT' : 'ACCOUNT'} <ArrowUpRight size={13} /></button>
+          {authUser?.app_metadata?.role === 'admin' && <button className="account-link admin-nav-link" onClick={() => setAdminOpen(true)}>ADMIN <ArrowUpRight size={13} /></button>}<button className="account-link" onClick={() => { if (authUser) setAccountOpen(true); else { setAuthMode('signin'); setAuthMessage(''); setAuthOpen(true) } }}>{authUser ? 'MY ACCOUNT' : 'ACCOUNT'} <ArrowUpRight size={13} /></button>
         </div>
       </header>
 
@@ -269,6 +271,7 @@ function App() {
       </AnimatePresence>
 
       {studioOpen && <StudioModal user={authUser} onClose={() => setStudioOpen(false)} notify={notify} />}
+      {adminOpen && authUser?.app_metadata?.role === 'admin' && <AdminModal user={authUser} onClose={() => setAdminOpen(false)} notify={notify} />}
       {accountOpen && authUser && <AccountModal user={authUser} onClose={() => setAccountOpen(false)} onSignOut={async () => { await supabase.auth.signOut(); setAccountOpen(false); notify('Signed out successfully') }} notify={notify} />}
       {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} onOrderCreated={() => { setCart([]); setDrawer(''); notify('Order created — payment is still pending') }} />}
 
