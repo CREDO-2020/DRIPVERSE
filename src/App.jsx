@@ -129,6 +129,21 @@ function App() {
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
   ), [catalogProducts, category, search])
 
+  const groupedCart = useMemo(() => {
+    const grouped = new Map()
+    cart.forEach((product) => {
+      const key = String(product.id)
+      const current = grouped.get(key)
+      if (current) current.quantity += 1
+      else grouped.set(key, { product, quantity: 1 })
+    })
+    return Array.from(grouped.values())
+  }, [cart])
+
+  const cartSubtotal = cart.reduce((sum, product) => sum + Number(product.price || 0), 0)
+  const cartShipping = cartSubtotal === 0 || cartSubtotal >= 150000 ? 0 : 3000
+  const cartTotal = cartSubtotal + cartShipping
+
   const notify = (message) => {
     setToast(message)
     window.setTimeout(() => setToast(''), 2200)
@@ -167,14 +182,27 @@ function App() {
     } else if (!authUser) notify('Sign in to keep your bag saved')
     notify('Added to your bag')
   }
-  const removeCartItem = async (product, index) => {
-    setCart(old => old.filter((_, i) => i !== index))
+  const updateCartQuantity = async (product, requestedQuantity) => {
+    const availableStock = Math.max(0, Number(product.stock_quantity ?? 0))
+    const nextQuantity = Math.max(0, Math.min(Math.floor(Number(requestedQuantity) || 0), availableStock))
+    if (Number(requestedQuantity) > availableStock) {
+      notify(availableStock ? `Only ${availableStock} available for this piece` : 'This piece is currently out of stock')
+    }
+    const previousCart = cart
+    setCart((old) => [
+      ...old.filter((item) => String(item.id) !== String(product.id)),
+      ...Array.from({ length: nextQuantity }, () => product),
+    ])
     if (authUser && typeof product.id === 'string') {
-      const remaining = cart.filter((p, i) => i !== index).filter(p => String(p.id) === String(product.id)).length
-      if (remaining === 0) {
-        await supabase.from('cart_items').delete().eq('user_id', authUser.id).eq('product_id', product.id)
-      } else {
-        await supabase.from('cart_items').update({ quantity: remaining }).eq('user_id', authUser.id).eq('product_id', product.id)
+      const result = nextQuantity === 0
+        ? await supabase.from('cart_items').delete().eq('user_id', authUser.id).eq('product_id', product.id)
+        : await supabase.from('cart_items').upsert(
+            { user_id: authUser.id, product_id: product.id, quantity: nextQuantity },
+            { onConflict: 'user_id,product_id' }
+          )
+      if (result.error) {
+        setCart(previousCart)
+        notify('Bag could not be updated. Please try again.')
       }
     }
   }
@@ -284,10 +312,49 @@ function App() {
       {studioOpen && <StudioModal user={authUser} initialLook={studioInitialLook} onClose={() => { setStudioOpen(false); setStudioInitialLook(null) }} notify={notify} />}
       {adminOpen && authUser?.app_metadata?.role === 'admin' && <AdminModal user={authUser} onClose={() => setAdminOpen(false)} notify={notify} />}
       {accountOpen && authUser && <AccountModal user={authUser} onClose={() => setAccountOpen(false)} onEditLook={(look) => { setAccountOpen(false); setStudioInitialLook(look); setStudioOpen(true) }} onSignOut={async () => { await supabase.auth.signOut(); setAccountOpen(false); notify('Signed out successfully') }} notify={notify} />}
-      {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} onOrderCreated={() => { setCart([]); setDrawer(''); notify('Order created — payment is still pending') }} />}
+      {checkoutOpen && <CheckoutModal cart={groupedCart} subtotal={cartSubtotal} shipping={cartShipping} total={cartTotal} onClose={() => setCheckoutOpen(false)} onOrderCreated={() => { setCart([]); setDrawer(''); notify('Order created — payment is still pending') }} />}
 
       <AnimatePresence>
-        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}><motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div><button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button></div>{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div> : <><div className="drawer-items">{(drawer === 'cart' ? cart : catalogProducts.filter((p) => wishlist.includes(p.id))).map((p, i) => <div className="drawer-item" key={drawer + p.id + i}><img src={p.image} alt={p.name} /><div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong>{drawer === 'wishlist' && <button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button>}</div>{drawer === 'cart' && <button className="remove-item" aria-label="Remove item" onClick={() => removeCartItem(p, i)}><X size={15} /></button>}</div>)}</div>{drawer === 'cart' && <div className="drawer-total"><div><span>SUBTOTAL</span><strong>{money(cart.reduce((sum, p) => sum + p.price, 0))}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-light full-button" onClick={() => { if (!authUser) { setDrawer(''); setAuthMode('signin'); setAuthMessage('Sign in to place an order.'); setAuthOpen(true) } else { setCheckoutOpen(true) } }}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button></div>}</>}</motion.aside></motion.div>}
+        {drawer && <motion.div className="drawer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDrawer('')}>
+          <motion.aside className="side-drawer" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-heading">
+              <div><p className="eyebrow">YOUR PERSONAL ROTATION</p><h2>{drawer === 'cart' ? 'THE BAG' : 'SAVED PIECES'}</h2></div>
+              <button className="icon-button" onClick={() => setDrawer('')} aria-label="Close drawer"><X /></button>
+            </div>
+            {(drawer === 'cart' ? groupedCart : catalogProducts.filter((p) => wishlist.includes(p.id))).length === 0 ? (
+              <div className="drawer-empty"><ShoppingBag size={30} /><p>{drawer === 'cart' ? 'Your bag is waiting for its first piece.' : 'Your wishlist is a blank canvas.'}</p><button className="button button-light" onClick={() => { setDrawer(''); scrollTo('shop') }}>EXPLORE THE DROP</button></div>
+            ) : <>
+              <div className="drawer-items">
+                {drawer === 'cart' ? groupedCart.map(({ product: p, quantity }) => (
+                  <div className="drawer-item" key={`cart-${p.id}`}>
+                    <img src={p.image} alt={p.name} />
+                    <div className="drawer-item-details">
+                      <p>{p.name}</p><span>{p.category}</span><strong>{money(p.price * quantity)}</strong>
+                      <div className="quantity-control" aria-label={`Quantity for ${p.name}`}>
+                        <button type="button" aria-label={`Decrease ${p.name} quantity`} onClick={() => updateCartQuantity(p, quantity - 1)} disabled={quantity <= 1}>−</button>
+                        <span>{quantity}</span>
+                        <button type="button" aria-label={`Increase ${p.name} quantity`} onClick={() => updateCartQuantity(p, quantity + 1)} disabled={quantity >= Number(p.stock_quantity ?? 0)}>+</button>
+                        <button type="button" className="quantity-remove" onClick={() => updateCartQuantity(p, 0)}>REMOVE</button>
+                      </div>
+                    </div>
+                  </div>
+                )) : catalogProducts.filter((p) => wishlist.includes(p.id)).map((p) => (
+                  <div className="drawer-item" key={`wishlist-${p.id}`}>
+                    <img src={p.image} alt={p.name} />
+                    <div><p>{p.name}</p><span>{p.category}</span><strong>{money(p.price)}</strong><button className="text-action" onClick={() => addToCart(p)}>ADD TO BAG +</button></div>
+                  </div>
+                ))}
+              </div>
+              {drawer === 'cart' && <div className="drawer-total">
+                <div><span>SUBTOTAL</span><strong>{money(cartSubtotal)}</strong></div>
+                <div><span>DELIVERY</span><strong>{cartShipping === 0 ? 'FREE' : money(cartShipping)}</strong></div>
+                <div className="drawer-grand-total"><span>ESTIMATED TOTAL</span><strong>{money(cartTotal)}</strong></div>
+                <p>{cartShipping === 0 ? 'Complimentary delivery on this order.' : `Delivery is ${money(3000)}. Free delivery from ${money(150000)}.`}</p>
+                <button className="button button-light full-button" onClick={() => { if (!authUser) { setDrawer(''); setAuthMode('signin'); setAuthMessage('Sign in to place an order.'); setAuthOpen(true) } else { setCheckoutOpen(true) } }}>CONTINUE TO CHECKOUT <ArrowRight size={16} /></button>
+              </div>}
+            </>}
+          </motion.aside>
+        </motion.div>}
       </AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="toast" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }}><Check size={16} />{toast}</motion.div>}</AnimatePresence>
     </div>
