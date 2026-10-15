@@ -257,3 +257,11 @@
 /* Stock-aware storefront labels */
 .quick-add:disabled{opacity:.62;cursor:not-allowed;background:#262626;color:#aaa}
 .product-stock-note{margin:7px 0 0;font-size:9px;letter-spacing:.1em;color:#c7ad82}
+
+
+/* Admin order search and status filters */
+.admin-order-filters{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:10px;margin:0 0 14px;align-items:stretch}
+.admin-order-filters .admin-tools{margin:0;min-width:0}
+.admin-order-filter-label{display:grid;gap:6px;align-content:center;font-size:8px;letter-spacing:.12em;color:#999}
+.admin-order-filter-label select{width:100%;min-width:0;background:#1a1a1a;border:1px solid #3b3b3b;color:#eee;padding:12px;font:inherit;letter-spacing:.04em}
+@media(max-width:560px){.admin-order-filters{grid-template-columns:1fr}.admin-order-filter-label{grid-template-columns:60px minmax(0,1fr);align-items:center}}
