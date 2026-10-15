@@ -8,6 +8,33 @@
 - npm
 - VS Code (recommended)
 
+
+## Enable the admin account
+
+The admin dashboard uses Supabase Auth's trusted `app_metadata.role` claim and matching Row Level Security policies. Do **not** use `user_metadata` for admin privileges because users can edit their own user metadata.
+
+1. Sign in to the [DRIPVERSE Supabase dashboard](https://supabase.com/dashboard/project/pmntyhzdzptobvuxytnq).
+2. Open **SQL Editor** and run the following query after replacing the email with the email address of **your own account**:
+
+   ```sql
+   update auth.users
+   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
+   where email = 'YOUR_LOGIN_EMAIL';
+   ```
+
+3. Confirm the role was set:
+
+   ```sql
+   select email, raw_app_meta_data ->> 'role' as role
+   from auth.users
+   where email = 'YOUR_LOGIN_EMAIL';
+   ```
+
+4. Sign out of DRIPVERSE and sign back in so the new app metadata is included in your session. The **ADMIN** link should then appear.
+5. Keep admin access limited to trusted accounts. Do not expose the Supabase service-role or secret key in frontend code.
+
+The admin dashboard supports product creation, editing, archiving/unarchiving, price and stock updates, plus viewing orders and updating their statuses. The admin policies were applied to the connected Supabase project.
+
 ## Run locally on Windows
 
 ```powershell
@@ -57,8 +84,9 @@ A GitHub Actions workflow also runs the production build when code is pushed to 
 ## Still needed before a commercial launch
 
 - **Payments:** no payment provider is connected. Orders created through checkout remain `pending`; the app does not collect money or mark orders paid.
-- **Order history UI:** database tables and secure order creation exist; a customer-facing order history page remains to be built.
-- **Admin inventory tools:** product management and stock updates need an admin interface.
+- **Payments:** no payment provider is connected. Orders created through checkout remain `pending`; the app does not collect money or mark orders paid.
+- **Admin authorization setup:** the admin dashboard is restricted to accounts whose trusted Supabase `app_metadata.role` is set to `admin`. Follow the setup steps below before expecting the ADMIN navigation link to appear.
+- **Production testing:** run the GitHub Actions build and manually test authentication, cart sync, checkout, account history, admin product updates, order status changes, and WebGL on desktop and mobile before launch.
 - **Real 3D assets:** the studio currently uses a stylized procedural 3D avatar, not a detailed rigged fashion model or real garment simulations.
 - **Production testing:** run the GitHub Actions build and manually test authentication, cart sync, checkout, and WebGL on desktop and mobile before launch.
 - **Product photography:** Unsplash photos are visual placeholders. Replace them with appropriately licensed product photography and verified inventory/prices.
