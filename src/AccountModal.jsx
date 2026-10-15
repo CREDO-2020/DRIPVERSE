@@ -59,6 +59,29 @@ export default function AccountModal({ user, onClose, onEditLook, onSignOut, not
     return () => { active = false }
   }, [user])
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`customer-orders-${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const updated = payload.new
+        setOrders((current) => current.map((order) => order.id === updated.id
+          ? { ...order, ...updated, order_items: order.order_items }
+          : order))
+        const label = statusLabels[updated.status] || updated.status
+        notify?.(`Order status updated: ${label}`)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user.id, notify])
+
   async function deleteLook(look) {
     if (!window.confirm(`Delete the saved look "${look.name}"? This cannot be undone.`)) return
     setDeletingLookId(look.id)
